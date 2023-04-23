@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "botapidev"
+version = "0.1.0"
+description = "saved tasks while working with TBA and aiogram3"
+authors = ["luculliano <vederecento@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+aiogram = {git = "https://github.com/aiogram/aiogram.git", rev = "v3.0.0b7"}
+python-dotenv = {git = "https://github.com/theskumar/python-dotenv.git", rev = "v1.0.0"}
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
