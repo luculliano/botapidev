@@ -118,14 +118,14 @@ async def proceed_help(message: Message) -> None:
         "If you guess the number for 5 attempts "
         "I'll send you fun meme.\n\n"
         "Available commands:\n"
-        "/play - to start playing\n"
+        "/game - to start playing\n"
         "/cancel - to cancel game\n"
         "/stat - to show stat\n"
         "/help - to show this message\n\n"
     )
 
 
-@dp.message(Command("play"))
+@dp.message(Command("game"))
 async def proceed_play(message: Message) -> None:
     cur_uid = message.from_user.id  # pyright: ignore
     if users_db[cur_uid]["state"] == 1:
@@ -162,8 +162,8 @@ async def proceed_numbers(message: Message) -> None:
     await _define_number(cur_uid, message)
 
     if users_db[cur_uid]["attempts"] < 0:
-        await message.reply(
-            "You lose. No attempts have been left. "
+        await message.answer(
+            "No attempts have been left.\n"
             f"The answer is {users_db[cur_uid]['secret_number']}."
         )
         _finish_game(cur_uid, is_win=False)
