@@ -128,27 +128,37 @@ async def proceed_help(message: Message) -> None:
 @dp.message(Command("game"))
 async def proceed_play(message: Message) -> None:
     cur_uid = message.from_user.id  # pyright: ignore
-    if users_db[cur_uid]["state"] == 1:
-        await message.answer("Command /play not available in game mode.")
-    else:
-        await message.answer("The number is picked. You have 5 attempts.")
-        _start_game(cur_uid)
-    logging.info(users_db[cur_uid])
+    try:
+        if users_db[cur_uid]["state"] == 1:
+            await message.answer("Command /play not available in game mode.")
+        else:
+            await message.answer("The number is picked. You have 5 attempts.")
+            _start_game(cur_uid)
+        logging.info(users_db[cur_uid])
+    except Exception:
+        await message.answer(f"User {cur_uid} doesn't exist. Use /start to log in.")
 
 
 @dp.message(Command("cancel"))
 async def proceed_cancel(message: Message) -> None:
     cur_uid = message.from_user.id  # pyright: ignore
-    if users_db[cur_uid]["state"] == 1:
-        await message.answer("The game has been stopped.")
-        _cancel_game(cur_uid)
-    else:
-        await message.answer("Command /cancel is available in game mode only.")
+    try:
+        if users_db[cur_uid]["state"] == 1:
+            await message.answer("The game has been stopped.")
+            _cancel_game(cur_uid)
+        else:
+            await message.answer("Command /cancel is available in game mode only.")
+    except KeyError:
+        await message.answer(f"User {cur_uid} doesn't exist. Use /start to log in.")
 
 
 @dp.message(Command("stat"))
 async def proceed_stat(message: Message) -> None:
-    await message.answer(_show_stat(message.from_user.id))  # pyright: ignore
+    cur_uid = message.from_user.id  # pyright: ignore
+    try:
+        await message.answer(_show_stat(cur_uid))
+    except KeyError:
+        await message.answer(f"User {cur_uid} doesn't exist. Use /start to log in.")
 
 
 @dp.message(lambda msg: msg.text and re.fullmatch(r"\d|\d\d|100", msg.text))
