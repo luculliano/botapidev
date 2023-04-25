@@ -9,7 +9,7 @@ from aiogram.filters import Command
 from aiogram.types.message import Message
 
 from config import TELEGRAM_BOT_TOKEN
-from db import init_db, save_user_progress
+from db import _init_db, save_user_progress
 
 bot = Bot(TELEGRAM_BOT_TOKEN)
 
@@ -17,8 +17,9 @@ dp = Dispatcher()
 
 logging.basicConfig(level=logging.INFO)
 
-users_db = init_db()
-
+async def init_db() -> None:
+    global users_db
+    users_db = await _init_db()
 
 def _create_user(uid: int) -> None:
     users_db[uid] = {
@@ -28,7 +29,6 @@ def _create_user(uid: int) -> None:
         "secret_number": None,
         "attempts": 5,
     }
-    save_user_progress(uid, users_db[uid])
 
 
 def _start_game(uid: int) -> None:
@@ -36,7 +36,6 @@ def _start_game(uid: int) -> None:
     users_db[uid]["tries"] += 1
     users_db[uid]["secret_number"] = randbelow(100)
     users_db[uid]["attempts"] -= 1
-    save_user_progress(uid, users_db[uid])
 
 
 def _finish_game(uid: int, is_win: bool) -> None:
@@ -44,14 +43,12 @@ def _finish_game(uid: int, is_win: bool) -> None:
     users_db[uid]["attempts"] = 5
     if is_win:
         users_db[uid]["wins"] += 1
-    save_user_progress(uid, users_db[uid])
 
 
 def _cancel_game(uid: int) -> None:
     users_db[uid]["state"] = 0
     users_db[uid]["tries"] -= 1
     users_db[uid]["attempts"] = 5
-    save_user_progress(uid, users_db[uid])
 
 
 def _rate_user(uid: int) -> str:
@@ -82,6 +79,7 @@ async def _define_number(uid: int, message: Message) -> None:
         except Exception:
             await message.answer("Congratulations! You're right. (No meme, sorry...)")
         _finish_game(uid, is_win=True)
+        await save_user_progress(uid, users_db[uid])
     elif msg > users_db[uid]["secret_number"]:
         attempts = users_db[uid]["attempts"]
         users_db[uid]["attempts"] -= 1
@@ -113,6 +111,7 @@ async def proceed_start(message: Message) -> None:
     cur_uid = message.from_user.id  # pyright: ignore
     if cur_uid not in users_db:
         _create_user(cur_uid)
+        await save_user_progress(cur_uid, users_db[cur_uid])
 
 
 @dp.message(Command("help"))
@@ -130,11 +129,11 @@ async def proceed_help(message: Message) -> None:
 
 
 @dp.message(Command("game"))
-async def proceed_play(message: Message) -> None:
+async def proceed_game(message: Message) -> None:
     cur_uid = message.from_user.id  # pyright: ignore
     try:
         if users_db[cur_uid]["state"] == 1:
-            await message.answer("Command /play not available in game mode.")
+            await message.answer("Command /game not available in game mode.")
         else:
             await message.answer("The number is picked. You have 5 attempts.")
             _start_game(cur_uid)
@@ -150,6 +149,7 @@ async def proceed_cancel(message: Message) -> None:
         if users_db[cur_uid]["state"] == 1:
             await message.answer("The game has been stopped.")
             _cancel_game(cur_uid)
+            await save_user_progress(cur_uid, users_db[cur_uid])
         else:
             await message.answer("Command /cancel is available in game mode only.")
     except KeyError:
@@ -181,7 +181,7 @@ async def proceed_numbers(message: Message) -> None:
             f"The answer is {users_db[cur_uid]['secret_number']}."
         )
         _finish_game(cur_uid, is_win=False)
-        return
+        await save_user_progress(cur_uid, users_db[cur_uid])
 
 
 @dp.message()
@@ -190,6 +190,7 @@ async def proceed_other(message: Message) -> None:
 
 
 async def main() -> None:
+    await init_db()
     await dp.start_polling(bot)
 
 

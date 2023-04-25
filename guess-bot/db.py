@@ -1,24 +1,31 @@
+import asyncio
 import pickle
 from pathlib import Path
+
+import aiofiles
 
 path = Path(__file__).parent.joinpath("users_db.pql")
 
 UserProgress = dict[str, int | None]
 
 
-def save_user_progress(uid: int, progress: UserProgress) -> None:
-    with open(path, "rb+") as file:
-        users_db = pickle.load(file)
+async def save_user_progress(uid: int, progress: UserProgress) -> None:
+    """updates dictionary in "users_db.pql" file"""
+    async with aiofiles.open(path, "rb+") as file:
+        data = await file.read()
+        users_db = pickle.loads(data)
         users_db.update({uid: progress})
-        file.seek(0)
-        pickle.dump(users_db, file)
+        await file.seek(0)
+        await file.write(pickle.dumps(users_db))
 
 
-def init_db() -> dict:
+async def _init_db() -> dict:
+    """creates "users_db.pkl" if it doesn't exist or loads existing"""
     if path.exists():
-        with open(path, "rb") as file:
-            users_db = pickle.load(file)
+        async with aiofiles.open(path, "rb") as file:
+            data = await file.read()
+            users_db = pickle.loads(data)
             return users_db
-    with open(path, "wb") as file:
-        pickle.dump({}, file)
+    async with aiofiles.open(path, "wb") as file:
+        await file.write(pickle.dumps({}))
     return {}
