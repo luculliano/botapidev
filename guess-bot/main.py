@@ -9,6 +9,7 @@ from aiogram.filters import Command
 from aiogram.types.message import Message
 
 from config import TELEGRAM_BOT_TOKEN
+from db import init_db, save_user_progress
 
 bot = Bot(TELEGRAM_BOT_TOKEN)
 
@@ -16,7 +17,7 @@ dp = Dispatcher()
 
 logging.basicConfig(level=logging.INFO)
 
-users_db = {}
+users_db = init_db()
 
 
 def _create_user(uid: int) -> None:
@@ -27,6 +28,7 @@ def _create_user(uid: int) -> None:
         "secret_number": None,
         "attempts": 5,
     }
+    save_user_progress(uid, users_db[uid])
 
 
 def _start_game(uid: int) -> None:
@@ -34,7 +36,7 @@ def _start_game(uid: int) -> None:
     users_db[uid]["tries"] += 1
     users_db[uid]["secret_number"] = randbelow(100)
     users_db[uid]["attempts"] -= 1
-    print(users_db)
+    save_user_progress(uid, users_db[uid])
 
 
 def _finish_game(uid: int, is_win: bool) -> None:
@@ -42,12 +44,14 @@ def _finish_game(uid: int, is_win: bool) -> None:
     users_db[uid]["attempts"] = 5
     if is_win:
         users_db[uid]["wins"] += 1
+    save_user_progress(uid, users_db[uid])
 
 
 def _cancel_game(uid: int) -> None:
     users_db[uid]["state"] = 0
     users_db[uid]["tries"] -= 1
     users_db[uid]["attempts"] = 5
+    save_user_progress(uid, users_db[uid])
 
 
 def _rate_user(uid: int) -> str:
