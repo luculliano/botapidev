@@ -1,103 +1,28 @@
 import asyncio
 import logging
 import re
-from secrets import randbelow
 
-import aiohttp
 from aiogram import Bot, Dispatcher
 from aiogram.filters import Command
 from aiogram.types.message import Message
 
 from config import TELEGRAM_BOT_TOKEN
-from db import _init_db, save_user_progress
+from db import (
+    CantGetUserStat,
+    cancel_game,
+    create_table,
+    create_user,
+    define_number,
+    get_game_stat,
+    show_main_stat,
+    start_game,
+)
 
 bot = Bot(TELEGRAM_BOT_TOKEN)
 
 dp = Dispatcher()
 
 logging.basicConfig(level=logging.INFO)
-
-async def init_db() -> None:
-    global users_db
-    users_db = await _init_db()
-
-def _create_user(uid: int) -> None:
-    users_db[uid] = {
-        "state": 0,
-        "tries": 0,
-        "wins": 0,
-        "secret_number": None,
-        "attempts": 5,
-    }
-
-
-def _start_game(uid: int) -> None:
-    users_db[uid]["state"] = 1
-    users_db[uid]["tries"] += 1
-    users_db[uid]["secret_number"] = randbelow(100)
-    users_db[uid]["attempts"] -= 1
-
-
-def _finish_game(uid: int, is_win: bool) -> None:
-    users_db[uid]["state"] = 0
-    users_db[uid]["attempts"] = 5
-    if is_win:
-        users_db[uid]["wins"] += 1
-
-
-def _cancel_game(uid: int) -> None:
-    users_db[uid]["state"] = 0
-    users_db[uid]["tries"] -= 1
-    users_db[uid]["attempts"] = 5
-
-
-def _rate_user(uid: int) -> str:
-    rating = {key: value["wins"] for key, value in users_db.items()}
-    sorted_users = sorted(rating, key=lambda key: rating[key], reverse=True)
-    return f"#{sorted_users.index(uid) + 1} by rating"
-
-
-def _show_stat(uid: int) -> str:
-    return (
-        f"STATISTIC\n\n"
-        f"UID: {uid}\n"
-        f"Tries: {users_db[uid]['tries']}\n"
-        f"Memes: {users_db[uid]['wins']} {_rate_user(uid)}"
-    )
-
-
-async def _define_number(uid: int, message: Message) -> None:
-    """determine the user number in game mode"""
-    msg = int(message.text)  # pyright: ignore
-
-    if msg == users_db[uid]["secret_number"]:
-        try:
-            meme = await _get_random_meme()
-            await message.answer_photo(
-                meme, "Congratulations! Here's the meme for you."
-            )
-        except Exception:
-            await message.answer("Congratulations! You're right. (No meme, sorry...)")
-        _finish_game(uid, is_win=True)
-        await save_user_progress(uid, users_db[uid])
-    elif msg > users_db[uid]["secret_number"]:
-        attempts = users_db[uid]["attempts"]
-        users_db[uid]["attempts"] -= 1
-        if attempts > 0:
-            await message.reply(f"Too much. Try again [{attempts}].")
-    elif msg < users_db[uid]["secret_number"]:
-        attempts = users_db[uid]["attempts"]
-        users_db[uid]["attempts"] -= 1
-        if attempts > 0:
-            await message.reply(f"Too low. Try again [{attempts}].")
-
-
-async def _get_random_meme() -> str:
-    """get random picture to send when user win"""
-    async with aiohttp.ClientSession() as session:
-        async with session.get("https://meme-api.com/gimme") as response:
-            result = await response.json()
-            return result["url"]
 
 
 @dp.message(Command("start"))
@@ -109,9 +34,7 @@ async def proceed_start(message: Message) -> None:
     )
 
     cur_uid = message.from_user.id  # pyright: ignore
-    if cur_uid not in users_db:
-        _create_user(cur_uid)
-        await save_user_progress(cur_uid, users_db[cur_uid])
+    await create_user(cur_uid)
 
 
 @dp.message(Command("help"))
@@ -132,13 +55,14 @@ async def proceed_help(message: Message) -> None:
 async def proceed_game(message: Message) -> None:
     cur_uid = message.from_user.id  # pyright: ignore
     try:
-        if users_db[cur_uid]["state"] == 1:
+        data = await get_game_stat(cur_uid)
+        if data.state == 1:
             await message.answer("Command /game not available in game mode.")
         else:
             await message.answer("The number is picked. You have 5 attempts.")
-            _start_game(cur_uid)
-        logging.info(users_db[cur_uid])
-    except Exception:
+            await start_game(cur_uid)
+            logging.info(data)
+    except CantGetUserStat:
         await message.answer(f"User {cur_uid} doesn't exist. Use /start to log in.")
 
 
@@ -146,13 +70,13 @@ async def proceed_game(message: Message) -> None:
 async def proceed_cancel(message: Message) -> None:
     cur_uid = message.from_user.id  # pyright: ignore
     try:
-        if users_db[cur_uid]["state"] == 1:
+        data = await get_game_stat(cur_uid)
+        if data.state == 1:
+            await cancel_game(cur_uid)
             await message.answer("The game has been stopped.")
-            _cancel_game(cur_uid)
-            await save_user_progress(cur_uid, users_db[cur_uid])
         else:
             await message.answer("Command /cancel is available in game mode only.")
-    except KeyError:
+    except CantGetUserStat:
         await message.answer(f"User {cur_uid} doesn't exist. Use /start to log in.")
 
 
@@ -160,8 +84,8 @@ async def proceed_cancel(message: Message) -> None:
 async def proceed_stat(message: Message) -> None:
     cur_uid = message.from_user.id  # pyright: ignore
     try:
-        await message.answer(_show_stat(cur_uid))
-    except KeyError:
+        await message.answer(await show_main_stat(cur_uid))
+    except CantGetUserStat:
         await message.answer(f"User {cur_uid} doesn't exist. Use /start to log in.")
 
 
@@ -169,19 +93,14 @@ async def proceed_stat(message: Message) -> None:
 async def proceed_numbers(message: Message) -> None:
     cur_uid = message.from_user.id  # pyright: ignore
 
-    if users_db[cur_uid]["state"] == 0:
-        await message.answer("Please, use numbers in game mode only.")
-        return
-
-    await _define_number(cur_uid, message)
-
-    if users_db[cur_uid]["attempts"] < 0:
-        await message.answer(
-            "No attempts have been left.\n"
-            f"The answer is {users_db[cur_uid]['secret_number']}."
-        )
-        _finish_game(cur_uid, is_win=False)
-        await save_user_progress(cur_uid, users_db[cur_uid])
+    try:
+        data = await get_game_stat(cur_uid)
+        if data.state == 0:
+            await message.answer("Please, use numbers in game mode only.")
+            return
+        await define_number(cur_uid, message)
+    except CantGetUserStat:
+        await message.answer(f"User {cur_uid} doesn't exist. Use /start to log in.")
 
 
 @dp.message()
@@ -190,7 +109,7 @@ async def proceed_other(message: Message) -> None:
 
 
 async def main() -> None:
-    await init_db()
+    await create_table()
     await dp.start_polling(bot)
 
 
