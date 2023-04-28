@@ -191,7 +191,7 @@ async def define_number(tg_uid: int, message: Message):
         await _update_attempt(tg_uid)
         if attempts > 0:
             await message.reply(f"Too little. Try again [{attempts}].")
-    if data.attempts <= 0:
+    if data.attempts < 0:
         await message.answer(
             "No attempts have been left.\n" f"The answer is {data.secret_number}."
         )
