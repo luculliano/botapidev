@@ -1,5 +1,4 @@
 __pycache__/
 venv/
 .env
-users_db.*
-*.db
+*.sqlite3
