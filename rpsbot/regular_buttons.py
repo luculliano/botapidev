@@ -1,10 +1,11 @@
 import asyncio
 import logging
 from os import getenv
-
+from aiogram import F
 from aiogram import Bot, Dispatcher
 from aiogram.filters import Command, Text
 from aiogram.types import (
+    ContentType,
     KeyboardButton,
     KeyboardButtonPollType,
     ReplyKeyboardMarkup,
@@ -94,8 +95,10 @@ async def proceed_loc(message: Message) -> None:
     await message.answer("Location", reply_markup=loc_keyboard)
 
 
+# type='quiz' - викторина
+# type='regular' - опрос
 poll_btn: KeyboardButton = KeyboardButton(
-    text="Создать опрос/викторину", request_poll=KeyboardButtonPollType()
+    text="Создать опрос/викторину", request_poll=KeyboardButtonPollType(type="quiz")
 )
 
 kb = ReplyKeyboardMarkup(
@@ -106,6 +109,22 @@ kb = ReplyKeyboardMarkup(
 @dp.message(Command("quz"))
 async def proceed_quiz(message: Message) -> None:
     await message.answer("quzzz", reply_markup=kb)
+
+
+mob_btn = KeyboardButton(text="share phone", request_contact=True)
+mob_keyboard = ReplyKeyboardMarkup(
+    keyboard=[[mob_btn]], resize_keyboard=True, one_time_keyboard=True
+)
+
+
+@dp.message(Command("reg"))
+async def proceed_phone(message: Message) -> None:
+    await message.answer("Register bellow", reply_markup=mob_keyboard)
+
+
+@dp.message(F.content_type == ContentType.CONTACT)
+async def proceed_contact(message: Message) -> None:
+    logging.info(f"got the data: {message.contact}")
 
 
 async def main() -> None:
