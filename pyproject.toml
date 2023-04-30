@@ -7,7 +7,7 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.10"
-aiogram = {git = "https://github.com/aiogram/aiogram.git", rev = "v3.0.0b7"}
+aiogram = {git = "https://github.com/aiogram/aiogram.git"}
 python-dotenv = {git = "https://github.com/theskumar/python-dotenv.git", rev = "v1.0.0"}
 aiosqlite = {git = "https://github.com/omnilib/aiosqlite.git", rev = "v0.19.0"}
 
