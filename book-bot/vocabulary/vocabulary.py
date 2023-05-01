@@ -1,6 +1,6 @@
 """This module contains vocabularies with answers and commands"""
 
-VOCABULARY_RU = {
+VOCABULARY_RU: dict[str, str] = {
     "description": "Pet-проект, созданный с использованием aiogram3.x.\n"
                          "Исходный код: https://github.com/luculliano/botapidev",
 
@@ -13,7 +13,10 @@ VOCABULARY_RU = {
              "в <i>Menu</i> слева.\nЧтобы сохранить закладку - нажите на кнопку "
              "с номером страницы.\n\n<b>Приятного чтения!</b>",
 
-    "/bookmarks": ("Страница добавлена в закладки!", "Это список Ваших закладок:"),
+    "/bookmarks": "Это список Ваших закладок",
+    "edit_bookmark": "Страница добавлена в закладки!",
+    "backward": "<<",
+    "forward": ">>"
 }
 
 VOCABULARY_COMMANDS_RU = {
