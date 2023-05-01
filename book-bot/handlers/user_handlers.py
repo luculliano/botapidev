@@ -41,7 +41,7 @@ async def proceed_beginning(message: Message) -> None:
     await message.answer(text, reply_markup=keyboard)
 
 
-@router.callback_query(Text("backword"))
+@router.callback_query(Text("backward"))
 async def proceed_backward(callback: CallbackQuery) -> None | bool:
     cur_uid = callback.from_user.id  # pyright: ignore
     if users_db[cur_uid] == 1:
