@@ -4,7 +4,7 @@ from aiogram.filters.text import Text
 from aiogram.types import CallbackQuery
 from aiogram.types.message import Message
 
-from database import update_page, init_user, fetch_last_page
+from database import init_user, update_page
 from keyboards import create_inline_kb
 from services import get_book_length, get_text_of_page
 from vocabulary import VOCABULARY_RU
@@ -30,21 +30,34 @@ async def proceed_help(message: Message) -> None:
 @router.message(Command("beginning"))
 async def proceed_beginning(message: Message) -> None:
     cur_uid = message.from_user.id  # pyright: ignore
-    await update_page(cur_uid, -1, is_begin=True)
-    text = await get_text_of_page("1")
+    book_page = await update_page(cur_uid, -1, is_begin=True, is_continue=False)
+    text = await get_text_of_page(str(book_page))
     keyboard = create_inline_kb(
         3, "backward", f"1/{await get_book_length()}", "forward"
     )
     await message.answer(text, reply_markup=keyboard)
 
 
+@router.message(Command("continue"))
+async def proceed_continue(message: Message) -> None | bool:
+    cur_uid = message.from_user.id  # pyright: ignore
+    book_page = await update_page(cur_uid, 1, is_begin=False, is_continue=True)
+    text = await get_text_of_page(str(book_page))
+    keyboard = create_inline_kb(
+        3, "backward", f"{book_page}/{await get_book_length()}", "forward"
+    )
+    await message.answer(text, reply_markup=keyboard)  # pyright: ignore
+
+
 @router.callback_query(Text("backward"))
 async def proceed_backward(callback: CallbackQuery) -> None | bool:
     cur_uid = callback.from_user.id  # pyright: ignore
-    await update_page(cur_uid, -1)
-    text = await get_text_of_page(str(users_db[cur_uid]))
+    book_page = await update_page(cur_uid, -1, is_begin=False, is_continue=False)
+    if not book_page:
+        return await callback.answer()
+    text = await get_text_of_page(str(book_page))
     keyboard = create_inline_kb(
-        3, "backward", f"{users_db[cur_uid]}/{await get_book_length()}", "forward"
+        3, "backward", f"{book_page}/{await get_book_length()}", "forward"
     )
     await callback.message.edit_text(text=text, reply_markup=keyboard)  # pyright: ignore
 
@@ -52,12 +65,11 @@ async def proceed_backward(callback: CallbackQuery) -> None | bool:
 @router.callback_query(Text("forward"))
 async def proceed_forward(callback: CallbackQuery) -> None | bool:
     cur_uid = callback.from_user.id  # pyright: ignore
-    book_length = await get_book_length()
-    if users_db[cur_uid] == await get_book_length():
+    book_page = await update_page(cur_uid, 1, is_begin=False, is_continue=False)
+    if not book_page:
         return await callback.answer()
-    users_db[cur_uid] += 1
-    text = await get_text_of_page(str(users_db[cur_uid]))
+    text = await get_text_of_page(str(book_page))
     keyboard = create_inline_kb(
-        3, "backward", f"{users_db[cur_uid]}/{book_length}", "forward"
+        3, "backward", f"{book_page}/{await get_book_length()}", "forward"
     )
     await callback.message.edit_text(text=text, reply_markup=keyboard)  # pyright: ignore
