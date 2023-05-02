@@ -1,8 +1,16 @@
-create table if not exists users(
-    users_id integer primary key autoincrement,
-    tg_uid integer unique not null,
-    cur_page integer,
-    constraint positive_value1 check(0 < cur_page and cur_page <= 300)
+create table book(
+    book_id integer primary key autoincrement,
+    book_name text,
+    author_name text
+);
+
+create table book_pages(
+    book_pages_id integer primary key autoincrement,
+    page_number integer,
+    page_text text,
+    book_id integer,
+    constraint unique_book_page_number unique (book_id, page_number)
+    foreign key (book_id) references book (book_id)
 );
 
 create table if not exists bookmarks(
@@ -10,9 +18,15 @@ create table if not exists bookmarks(
     page_number integer,
     users_id integer,
     constraint unique_user_page_number unique(page_number, users_id), /*уникальное правило*/
-    constraint positive_value2 check(0 < page_number and page_number <= 300),
     foreign key (users_id) references users (users_id)
     on delete cascade  /*удаление пользователя удалит все с ним записи здесь*/
 );
 
-insert into users(tg_uid, cur_page) values (777, 1);
+create table if not exists users(
+    users_id integer primary key autoincrement,
+    tg_uid integer unique not null,
+    book_pages_id integer,
+    foreign key (book_pages_id) references book_pages (book_pages_id)
+);
+
+insert into book(book_name, author_name) values ("Ham on Rye", "Charles Bukowski");

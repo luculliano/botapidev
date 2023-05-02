@@ -15,10 +15,7 @@ router = Router()
 @router.message(Command("start"))
 async def proceed_start(message: Message) -> None:
     cur_uid = message.from_user.id  # pyright: ignore
-    answer = VOCABULARY_RU["/start"].format(
-        greet="С возвращением" if await init_user(cur_uid) else "Здравствуйте",
-        name=message.from_user.first_name  # pyright: ignore
-    )
+    answer = VOCABULARY_RU["/start"].format(name=message.from_user.first_name)  # pyright: ignore
     await message.answer(answer)
 
 
