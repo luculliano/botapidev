@@ -1,13 +1,21 @@
 import sys
 from pathlib import Path
-
 sys.path.append(str(Path(__file__).parent.joinpath("..")))
 
-import aiosqlite
-from config_data import logger
-from config_data import SQLITE_DB_FILE, SQLITE_SCRIPT, HAM_ON_RYE_JSON
-from services import get_book_data
 import asyncio
+from typing import NamedTuple
+
+import aiosqlite
+
+from config_data import logger
+from config_data import SQLITE_DB_FILE, SQLITE_SCRIPT
+from services import get_book_data
+
+
+class BookData(NamedTuple):
+    page_number: int
+    page_text: str
+    book_length: int
 
 
 class DataBase:
@@ -15,7 +23,7 @@ class DataBase:
         self.db_path = db_path
 
 
-    def _get_db_script(self) -> str:
+    def __get_db_script(self) -> str:
         with open(SQLITE_SCRIPT, encoding="utf-8") as file:
             return file.read()
 
@@ -23,13 +31,16 @@ class DataBase:
     async def init_db(self):
         """Inits database on startup with sql script execution"""
         async with aiosqlite.connect(self.db_path) as con:
-            await con.executescript(self._get_db_script())
+            await con.executescript(self.__get_db_script())
             await con.commit()
             logger.info("Database has been inited")
 
 
     async def init_book(self, book_id: int, path_to_book: Path) -> None:
-        """Inits book's data in database"""
+        """
+        Inits book's data in database. It's used to add it's content
+        in database only
+        """
         async with aiosqlite.connect(self.db_path) as con:
             values = ((page_number, page_text, book_id) for page_number, page_text
                       in get_book_data(path_to_book).items())
@@ -47,7 +58,7 @@ class DataBase:
 
 
     async def init_user(self, tg_uid: int) -> tuple[int, None] | None:
-        """Inits not existing user in database when /start"""
+        """Inits not existing user when /start"""
         async with aiosqlite.connect(self.db_path) as con:
             if not await self._check_user_in_db(tg_uid, con):
                 await con.execute("insert into users(tg_uid, book_pages_id) values "
@@ -58,40 +69,52 @@ class DataBase:
 
 
     async def _fetch_last_page(self, tg_uid: int,
-                               con: aiosqlite.Connection) -> None | aiosqlite.Row:
-        """Fetches user's last page and it's text"""
-        res = await con.execute("select page_number, page_text from users join "
-                                "book_pages using(book_pages_id) "
+                               con: aiosqlite.Connection) -> BookData:
+        """Fetches user's last page, it's text and amount of pages"""
+        # rewrite, count column
+        res = await con.execute("select page_number, page_text, (select "
+                                "count(page_number) from book_pages) from users "
+                                "join book_pages using(book_pages_id) "
                                 "where tg_uid = ?", (tg_uid,))
-        logger.info("Last page has been returned")
-        return await res.fetchone()
+        row = await res.fetchone()
+        return BookData(*row)  # pyright: ignore
 
 
-    async def update_page(self, tg_uid: int, move: int, *, is_begin: bool, is_continue: bool):
+    async def __move_begin(self, tg_uid: int, con: aiosqlite.Connection) -> None:
+        await con.execute("update users set book_pages_id = "
+                          "(select book_pages_id from book_pages where "
+                          "page_number=? and book_id=(select book_id from "
+                          "book_pages join users using(book_pages_id) where "
+                          "tg_uid = ?)) where tg_uid = ?", (1, tg_uid, tg_uid))
+
+
+    async def __move_page(self, tg_uid: int, con: aiosqlite.Connection, move: int) -> None:
+        await con.execute("update users set book_pages_id = "
+                          "(select book_pages_id from book_pages where "
+                          "page_number=(select page_number from users join "
+                          "book_pages using(book_pages_id) where "
+                          "tg_uid = ?)+?) where tg_uid=?", (tg_uid, move, tg_uid))
+
+
+    async def update_page(self, tg_uid: int, move: int = -1, *,
+is_begin: bool | None = None, is_continue: bool | None = None) -> BookData:
         """Handles users's pages depending on command"""
         async with aiosqlite.connect(SQLITE_DB_FILE) as con:
+            if not is_continue:
+                if not is_begin:
+                    await self.__move_page(tg_uid, con, move)
+                else:
+                    await self.__move_begin(tg_uid, con)
+                await con.commit()
             return await self._fetch_last_page(tg_uid, con)
-            # try:
-            #     if not is_continue:
-            #         if not is_begin:
-            #             await con.execute(
-            #                 "update users set cur_page = cur_page + ? " "where tg_uid = ?",
-            #                 (move, tg_uid),
-            #             )
-            #         else:
-            #             await con.execute(
-            #                 "update users set cur_page = ? where tg_uid = ?", (1, tg_uid)
-            #             )
-            #         await con.commit()
-            #         logger.info("Page has been updated")
-            #     # return await _fetch_last_page(tg_uid, con)
-            # except aiosqlite.IntegrityError:
-            #     return False
 
+    async def _show_bookmarks(self, tg_uid: int) -> None:
+        pass
 
 async def main() -> None:
     db = DataBase(SQLITE_DB_FILE)
-    print(await db.update_page(444, 1, is_begin=True, is_continue=True))
+    print(await db.update_page(333, 1, is_begin=True, is_continue=False))
 
 
-asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())

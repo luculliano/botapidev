@@ -1,15 +1,15 @@
-create table book(
+create table if not exists book(
     book_id integer primary key autoincrement,
     book_name text,
     author_name text
 );
 
-create table book_pages(
+create table if not exists book_pages(
     book_pages_id integer primary key autoincrement,
     page_number integer,
     page_text text,
     book_id integer,
-    constraint unique_book_page_number unique (book_id, page_number)
+    constraint unique_book_page_number unique (book_id, page_number),
     foreign key (book_id) references book (book_id)
 );
 
@@ -25,7 +25,7 @@ create table if not exists bookmarks(
 create table if not exists users(
     users_id integer primary key autoincrement,
     tg_uid integer unique not null,
-    book_pages_id integer,
+    book_pages_id integer not null,  /*not null ибо constraint check с условием нельзя в sqlite*/
     foreign key (book_pages_id) references book_pages (book_pages_id)
 );
 
