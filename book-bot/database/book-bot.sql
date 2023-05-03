@@ -15,10 +15,11 @@ create table if not exists book_pages(
 
 create table if not exists bookmarks(
     bookmarks_id integer primary key autoincrement,
-    page_number integer,
+    book_pages_id integer not null,
     users_id integer,
-    constraint unique_user_page_number unique(page_number, users_id), /*уникальное правило*/
-    foreign key (users_id) references users (users_id)
+    constraint unique_user_page_number unique(book_pages_id, users_id), /*уникальное правило*/
+    foreign key (users_id) references users (users_id) on delete cascade,
+    foreign key (book_pages_id) references book_pages (book_pages_id)
     on delete cascade  /*удаление пользователя удалит все с ним записи здесь*/
 );
 

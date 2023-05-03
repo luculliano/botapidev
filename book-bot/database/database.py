@@ -18,6 +18,9 @@ class BookData(NamedTuple):
     book_length: int
 
 
+class BookmarksData(NamedTuple):
+    pass
+
 class DataBase:
     def __init__(self, db_path: Path) -> None:
         self.db_path = db_path
@@ -108,12 +111,13 @@ is_begin: bool | None = None, is_continue: bool | None = None) -> BookData:
                 await con.commit()
             return await self._fetch_last_page(tg_uid, con)
 
+
     async def _show_bookmarks(self, tg_uid: int) -> None:
         pass
 
 async def main() -> None:
     db = DataBase(SQLITE_DB_FILE)
-    print(await db.update_page(333, 1, is_begin=True, is_continue=False))
+    print(await db.update_page(333, 1, is_begin=False, is_continue=False))
 
 
 if __name__ == "__main__":

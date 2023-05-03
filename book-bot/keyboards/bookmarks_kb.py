@@ -5,7 +5,7 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from vocabulary import VOCABULARY_RU
 
 
-def create_inline_kb(width: int = 3, *args, **kwargs) -> InlineKeyboardMarkup:
+def create_bookmarks_kb(width: int = 3, *args, **kwargs) -> InlineKeyboardMarkup:
     """Generates specific width inline keyboard on the fly"""
     keyboard = []
     buttons = (InlineKeyboardButton(text=VOCABULARY_RU[button_data]
