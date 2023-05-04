@@ -18,6 +18,11 @@ class BookData(NamedTuple):
     book_length: int
 
 
+class BookmarkData(NamedTuple):
+    page_number: int
+    page_text: str
+
+
 class BookmarksData(NamedTuple):
     pass
 
@@ -102,7 +107,7 @@ class DataBase:
     async def update_page(self, tg_uid: int, move: int = -1, *,
 is_begin: bool | None = None, is_continue: bool | None = None) -> BookData:
         """Handles users's pages depending on command"""
-        async with aiosqlite.connect(SQLITE_DB_FILE) as con:
+        async with aiosqlite.connect(self.db_path) as con:
             if not is_continue:
                 if not is_begin:
                     await self.__move_page(tg_uid, con, move)
@@ -112,12 +117,38 @@ is_begin: bool | None = None, is_continue: bool | None = None) -> BookData:
             return await self._fetch_last_page(tg_uid, con)
 
 
-    async def _show_bookmarks(self, tg_uid: int) -> None:
-        pass
+    async def show_bookmarks(self, tg_uid: int):
+        async with aiosqlite.connect(self.db_path) as con:
+            res = await con.execute("select page_number, page_text from "
+                                    "book_pages join bookmarks using"
+                                    "(book_pages_id) join users using(users_id) "
+                                    "where tg_uid = ?", (tg_uid,))
+            return await res.fetchall()
+
+
+    async def add_bookmark(self, tg_uid: int) -> None:
+        async with aiosqlite.connect(self.db_path) as con:
+            await con.execute("insert into bookmarks(book_pages_id, users_id) "
+                              "select book_pages_id, users_id from users "
+                              "where tg_uid = ?", (tg_uid,))
+            await con.commit()
+            logger.info("Bookmark has been added")
+
+
+    async def delete_bookmark(self, tg_uid: int, page_number: int) -> None:
+        async with aiosqlite.connect(self.db_path) as con:
+            await con.execute("delete from bookmarks where users_id=(select "
+                              "users_id from users where tg_uid = ?) and "
+                              "book_pages_id = (select book_pages_id from "
+                              "book_pages where page_number = ?)",
+                              (tg_uid, page_number))
+            await con.commit()
+            logger.info("Bookmark has been deleted")
+
 
 async def main() -> None:
     db = DataBase(SQLITE_DB_FILE)
-    print(await db.update_page(333, 1, is_begin=False, is_continue=False))
+    print(await db.show_bookmarks(222))
 
 
 if __name__ == "__main__":

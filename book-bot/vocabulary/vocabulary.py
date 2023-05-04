@@ -15,8 +15,13 @@ VOCABULARY_RU: dict[str, str] = {
 
     "/bookmarks": "Это список Ваших закладок",
     "add_bookmark": "Страница добавлена в закладки!",
+    "no_bookmarks": "Список закладок пуст",
     "backward": "<<",
-    "forward": ">>"
+    "forward": ">>",
+    "del": "❌",
+    "edit_bookmarks": "Редактировать закладки",
+    "cancel": "Отменить",
+    "continue": "/continue - продолжить чтение"
 }
 
 VOCABULARY_COMMANDS_RU = {

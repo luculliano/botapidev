@@ -9,8 +9,9 @@ from aiosqlite import IntegrityError
 
 from config_data import SQLITE_DB_FILE
 from database import DataBase
-from keyboards import create_inline_kb
+from keyboards import create_bookmarks_kb, create_edit_kb, create_inline_kb
 from vocabulary import VOCABULARY_RU
+from filters import IsBookmarkDelete
 
 router = Router()
 db = DataBase(SQLITE_DB_FILE)
@@ -75,10 +76,55 @@ async def proceed_forward(callback: CallbackQuery) -> None:
 @router.callback_query(lambda x: re.fullmatch(r"^(\d+)/\d+$", x.data))
 async def proceed_bookmark(callback: CallbackQuery) -> None:
     cur_uid = callback.from_user.id  # pyright: ignore
-    await callback.answer(text=VOCABULARY_RU["add_bookmark"])
+    try:
+        await db.add_bookmark(cur_uid)
+        await callback.answer(text=VOCABULARY_RU["add_bookmark"])
+    except IntegrityError:
+        await callback.answer()
 
 
 @router.message(Command("bookmarks"))
-async def proceed_bookmarks(message: Message) -> None:
-    keyboard = create_inline_kb(5, )
-    await message.answer(VOCABULARY_RU["/bookmarks"])
+async def proceed_bookmarks(message: Message) -> None | Message:
+    cur_uid = message.from_user.id  # pyright: ignore
+    bookmarks = await db.show_bookmarks(cur_uid)
+    if not bookmarks:
+        return await message.answer(VOCABULARY_RU["no_bookmarks"])
+    keyboard = create_bookmarks_kb(bookmarks)
+    await message.answer(VOCABULARY_RU["/bookmarks"], reply_markup=keyboard)
+
+
+@router.callback_query(Text("cancel"))
+async def proceed_cancel(callback: CallbackQuery) -> None:
+    await callback.message.edit_text(VOCABULARY_RU["continue"])  # pyright: ignore
+
+
+@router.callback_query(Text("cancel_del"))
+async def proceed_cancel_del(callback: CallbackQuery) -> None | bool:
+    cur_uid = callback.from_user.id  # pyright: ignore
+    bookmarks = await db.show_bookmarks(cur_uid)
+    keyboard = create_bookmarks_kb(bookmarks)
+    await callback.message.edit_text(VOCABULARY_RU["/bookmarks"],  # pyright: ignore
+                                     reply_markup=keyboard)
+
+
+@router.callback_query(Text("edit_bookmarks"))
+async def proceed_edit_bookmarks(callback: CallbackQuery) -> None | bool:
+    cur_uid = callback.from_user.id  # pyright: ignore
+    bookmarks = await db.show_bookmarks(cur_uid)
+    if not bookmarks:
+        return await callback.answer(VOCABULARY_RU["no_bookmarks"])
+    keyboard = create_edit_kb(bookmarks)
+    await callback.message.edit_text(VOCABULARY_RU["/bookmarks"],  # pyright: ignore
+                                     reply_markup=keyboard)
+
+
+@router.callback_query(IsBookmarkDelete())
+async def proceed_bookmark_del(callback: CallbackQuery, page_number: int) -> None | bool:
+    cur_uid = callback.from_user.id  # pyright: ignore
+    await db.delete_bookmark(cur_uid, page_number)
+    bookmarks = await db.show_bookmarks(cur_uid)
+    if not bookmarks:
+        return await callback.message.edit_text(VOCABULARY_RU["no_bookmarks"])  # pyright: ignore
+    keyboard = create_edit_kb(bookmarks)
+    await callback.message.edit_text(VOCABULARY_RU["/bookmarks"],  # pyright: ignore
+                                     reply_markup=keyboard)
