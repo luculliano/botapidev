@@ -3,7 +3,7 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.joinpath("..")))
 
 import asyncio
-from typing import NamedTuple
+from typing import Iterable, NamedTuple
 
 import aiosqlite
 
@@ -117,8 +117,22 @@ is_begin: bool | None = None, is_continue: bool | None = None) -> BookData:
             return await self._fetch_last_page(tg_uid, con)
 
 
-    async def show_bookmarks(self, tg_uid: int):
+    async def __delete_bookmark(self, tg_uid: int, con: aiosqlite.Connection,
+                              page_number: int) -> None:
+            await con.execute("delete from bookmarks where users_id=(select "
+                              "users_id from users where tg_uid = ?) and "
+                              "book_pages_id = (select book_pages_id from "
+                              "book_pages where page_number = ?)",
+                              (tg_uid, page_number))
+            await con.commit()
+            logger.info("Bookmark has been deleted")
+
+
+    async def show_bookmarks(self, tg_uid: int, *, is_del: bool = False,
+                             page_number: int | None = None) -> Iterable[aiosqlite.Row]:
         async with aiosqlite.connect(self.db_path) as con:
+            if is_del and page_number:
+                await self.__delete_bookmark(tg_uid, con, page_number)
             res = await con.execute("select page_number, page_text from "
                                     "book_pages join bookmarks using"
                                     "(book_pages_id) join users using(users_id) "
@@ -133,17 +147,6 @@ is_begin: bool | None = None, is_continue: bool | None = None) -> BookData:
                               "where tg_uid = ?", (tg_uid,))
             await con.commit()
             logger.info("Bookmark has been added")
-
-
-    async def delete_bookmark(self, tg_uid: int, page_number: int) -> None:
-        async with aiosqlite.connect(self.db_path) as con:
-            await con.execute("delete from bookmarks where users_id=(select "
-                              "users_id from users where tg_uid = ?) and "
-                              "book_pages_id = (select book_pages_id from "
-                              "book_pages where page_number = ?)",
-                              (tg_uid, page_number))
-            await con.commit()
-            logger.info("Bookmark has been deleted")
 
 
 async def main() -> None:

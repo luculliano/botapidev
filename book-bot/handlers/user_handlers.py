@@ -121,8 +121,7 @@ async def proceed_edit_bookmarks(callback: CallbackQuery) -> None | bool:
 @router.callback_query(IsBookmarkDelete())
 async def proceed_bookmark_del(callback: CallbackQuery, page_number: int) -> None | bool:
     cur_uid = callback.from_user.id  # pyright: ignore
-    await db.delete_bookmark(cur_uid, page_number)
-    bookmarks = await db.show_bookmarks(cur_uid)
+    bookmarks = await db.show_bookmarks(cur_uid, is_del=True, page_number=page_number)
     if not bookmarks:
         return await callback.message.edit_text(VOCABULARY_RU["no_bookmarks"])  # pyright: ignore
     keyboard = create_edit_kb(bookmarks)
