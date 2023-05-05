@@ -30,4 +30,11 @@ create table if not exists users(
     foreign key (book_pages_id) references book_pages (book_pages_id)
 );
 
-insert into book(book_name, author_name) values ("Ham on Rye", "Charles Bukowski");
+insert into book(book_name, author_name) values
+  ("Ham on Rye", "Charles Bukowski");
+
+alter table book add column page_amount integer;
+
+update book set page_amount =
+  (select COUNT(page_number) from book_pages WHERE book_id = 1)
+  where book_id = 1;

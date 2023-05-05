@@ -18,14 +18,6 @@ class BookData(NamedTuple):
     book_length: int
 
 
-class BookmarkData(NamedTuple):
-    page_number: int
-    page_text: str
-
-
-class BookmarksData(NamedTuple):
-    pass
-
 class DataBase:
     def __init__(self, db_path: Path) -> None:
         self.db_path = db_path
@@ -76,13 +68,12 @@ class DataBase:
                 logger.info("User has been inited")
 
 
-    async def _fetch_last_page(self, tg_uid: int,
+    async def __fetch_last_page(self, tg_uid: int,
                                con: aiosqlite.Connection) -> BookData:
         """Fetches user's last page, it's text and amount of pages"""
-        # rewrite, count column
-        res = await con.execute("select page_number, page_text, (select "
-                                "count(page_number) from book_pages) from users "
-                                "join book_pages using(book_pages_id) "
+        res = await con.execute("select page_number, page_text, page_amount "
+                                "from users join book_pages using(book_pages_id)"
+                                "join book using(book_id) "
                                 "where tg_uid = ?", (tg_uid,))
         row = await res.fetchone()
         return BookData(*row)  # pyright: ignore
@@ -114,7 +105,7 @@ is_begin: bool | None = None, is_continue: bool | None = None) -> BookData:
                 else:
                     await self.__move_begin(tg_uid, con)
                 await con.commit()
-            return await self._fetch_last_page(tg_uid, con)
+            return await self.__fetch_last_page(tg_uid, con)
 
 
     async def __delete_bookmark(self, tg_uid: int, con: aiosqlite.Connection,
@@ -147,6 +138,16 @@ is_begin: bool | None = None, is_continue: bool | None = None) -> BookData:
                               "where tg_uid = ?", (tg_uid,))
             await con.commit()
             logger.info("Bookmark has been added")
+
+
+    async def fetch_bookmark(self, tg_uid: int, page_number: int) -> BookData:
+        async with aiosqlite.connect(self.db_path) as con:
+            res = await con.execute("select page_number, page_text, page_amount "
+                                    "from users join book_pages using(book_pages_id)"
+                                    "join book using(book_id) where tg_uid = ? "
+                                    "and page_number = ?", (tg_uid, page_number))
+            row = await res.fetchone()
+            return BookData(*row)  # pyright: ignore
 
 
 async def main() -> None:

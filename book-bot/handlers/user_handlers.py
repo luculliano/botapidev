@@ -99,7 +99,7 @@ async def proceed_cancel(callback: CallbackQuery) -> None:
 
 
 @router.callback_query(Text("cancel_del"))
-async def proceed_cancel_del(callback: CallbackQuery) -> None | bool:
+async def proceed_cancel_del(callback: CallbackQuery) -> None:
     cur_uid = callback.from_user.id  # pyright: ignore
     bookmarks = await db.show_bookmarks(cur_uid)
     keyboard = create_bookmarks_kb(bookmarks)
