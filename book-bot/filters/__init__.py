@@ -1,1 +1,1 @@
-from .filters import IsBookmarkDelete
+from .filters import IsUsebookmark, IsBookmarkDelete

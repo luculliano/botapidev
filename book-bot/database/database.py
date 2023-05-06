@@ -8,7 +8,7 @@ from typing import Iterable, NamedTuple
 import aiosqlite
 
 from config_data import logger
-from config_data import SQLITE_DB_FILE, SQLITE_SCRIPT
+from config_data import SQLITE_SCRIPT
 from services import get_book_data
 
 
@@ -79,6 +79,22 @@ class DataBase:
         return BookData(*row)  # pyright: ignore
 
 
+    async def __fetch_bookmark(self, tg_uid: int,
+                        con: aiosqlite.Connection,  page_number: int) -> BookData:
+            res = await con.execute("select page_number, page_text, page_amount "
+                                    "from bookmarks join book_pages using(book_pages_id)"
+                                    "join book using(book_id) join users using(users_id) "
+                                    "where tg_uid = ? and page_number = ?",
+                                    (tg_uid, page_number))
+            row = await res.fetchone()
+            book_data = BookData(*row)  # pyright: ignore
+            await con.execute("update users set book_pages_id = (select book_pages_id "
+                              "from book_pages where page_number=? and book_id=?) "
+                              "where tg_uid=?", (book_data.page_number, 1, tg_uid))
+            await con.commit()
+            return book_data
+
+
     async def __move_begin(self, tg_uid: int, con: aiosqlite.Connection) -> None:
         await con.execute("update users set book_pages_id = "
                           "(select book_pages_id from book_pages where "
@@ -96,7 +112,8 @@ class DataBase:
 
 
     async def update_page(self, tg_uid: int, move: int = -1, *,
-is_begin: bool | None = None, is_continue: bool | None = None) -> BookData:
+is_begin: bool | None = None, is_continue: bool | None = None,
+is_bookmark: bool | None = None, page_number: int | None = None) -> BookData:
         """Handles users's pages depending on command"""
         async with aiosqlite.connect(self.db_path) as con:
             if not is_continue:
@@ -105,7 +122,8 @@ is_begin: bool | None = None, is_continue: bool | None = None) -> BookData:
                 else:
                     await self.__move_begin(tg_uid, con)
                 await con.commit()
-            return await self.__fetch_last_page(tg_uid, con)
+            return await (self.__fetch_bookmark(tg_uid, con, page_number) if \
+        is_bookmark and page_number else self.__fetch_last_page(tg_uid, con))
 
 
     async def __delete_bookmark(self, tg_uid: int, con: aiosqlite.Connection,
@@ -140,19 +158,8 @@ is_begin: bool | None = None, is_continue: bool | None = None) -> BookData:
             logger.info("Bookmark has been added")
 
 
-    async def fetch_bookmark(self, tg_uid: int, page_number: int) -> BookData:
-        async with aiosqlite.connect(self.db_path) as con:
-            res = await con.execute("select page_number, page_text, page_amount "
-                                    "from users join book_pages using(book_pages_id)"
-                                    "join book using(book_id) where tg_uid = ? "
-                                    "and page_number = ?", (tg_uid, page_number))
-            row = await res.fetchone()
-            return BookData(*row)  # pyright: ignore
-
-
 async def main() -> None:
-    db = DataBase(SQLITE_DB_FILE)
-    print(await db.show_bookmarks(222))
+    pass
 
 
 if __name__ == "__main__":
