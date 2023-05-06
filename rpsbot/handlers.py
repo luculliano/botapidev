@@ -1,7 +1,8 @@
 from secrets import choice
 
 from aiogram import Router
-from aiogram.filters import Command, Text
+from aiogram.filters import Command
+from aiogram.filters.text import Text
 from aiogram.types.message import Message
 
 from keyboards import keyboard1, keyboard2

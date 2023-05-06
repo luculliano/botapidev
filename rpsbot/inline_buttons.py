@@ -3,7 +3,8 @@ import logging
 from os import getenv
 
 from aiogram import Bot, Dispatcher
-from aiogram.filters import Command, Text
+from aiogram.filters import Command
+from aiogram.filters.text import Text
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.types.callback_query import CallbackQuery
 from aiogram.types.message import Message
