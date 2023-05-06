@@ -1,4 +1,5 @@
 import re
+
 from aiogram.filters import BaseFilter
 from aiogram.types import CallbackQuery
 
@@ -10,10 +11,7 @@ class IsBookmarkDelete(BaseFilter):
     """
     async def __call__(self, callback: CallbackQuery) -> dict[str, int] | None:
         match = re.fullmatch(r"^(\d+)del+$", callback.data)  # pyright: ignore
-        try:
-            return {"page_number": int(match.group(1))}
-        except AttributeError:
-            pass
+        return {"page_number": int(match.group(1))} if match else None
 
 
 class IsUsebookmark(BaseFilter):
@@ -23,7 +21,4 @@ class IsUsebookmark(BaseFilter):
     """
     async def __call__(self, callback: CallbackQuery) -> dict[str, int] | None:
         match = re.fullmatch(r"^(\d+)move+$", callback.data)  # pyright: ignore
-        try:
-            return {"page_number": int(match.group(1))}
-        except AttributeError:
-            pass
+        return {"page_number": int(match.group(1))} if match else None

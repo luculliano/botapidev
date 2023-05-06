@@ -13,8 +13,10 @@ from filters import IsBookmarkDelete, IsUsebookmark
 from keyboards import create_bookmarks_kb, create_edit_kb, create_inline_kb
 from vocabulary import VOCABULARY_RU
 
+
 router = Router()
 db = DataBase(SQLITE_DB_FILE)
+
 
 @router.message(Command("start"))
 async def proceed_start(message: Message) -> None:
