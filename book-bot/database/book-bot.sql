@@ -1,7 +1,9 @@
 create table if not exists book(
     book_id integer primary key autoincrement,
     book_name text,
-    author_name text
+    author_name text,
+    release_date integer,
+    page_amount integer
 );
 
 create table if not exists book_pages(
@@ -30,11 +32,6 @@ create table if not exists users(
     foreign key (book_pages_id) references book_pages (book_pages_id)
 );
 
-insert into book(book_name, author_name) values
-  ("Ham on Rye", "Charles Bukowski");
-
-alter table book add column page_amount integer;
-
-update book set page_amount =
-  (select COUNT(page_number) from book_pages WHERE book_id = 1)
-  where book_id = 1;
+insert into book(book_name, author_name, release_date) values
+  ("Хлеб с ветчиной", "Чарльз Буковски", 1982),
+  ("Женщины", "Чарльз Буковски", 1978);

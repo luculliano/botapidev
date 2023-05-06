@@ -1,1 +1,1 @@
-from .database import DataBase
+from .database import BookData, BookInfo, DataBase

@@ -8,7 +8,7 @@ from typing import Iterable, NamedTuple
 import aiosqlite
 
 from config_data import logger
-from config_data import SQLITE_SCRIPT
+from config_data import SQLITE_SCRIPT, SQLITE_DB_FILE, WOMEN_JSON, HAM_ON_RYE_JSON
 from services import get_book_data
 
 
@@ -16,6 +16,12 @@ class BookData(NamedTuple):
     page_number: int
     page_text: str
     book_length: int
+
+
+class BookInfo(NamedTuple):
+    book_id: int
+    book_name: int
+    release_date: int
 
 
 class DataBase:
@@ -46,6 +52,9 @@ class DataBase:
                       in get_book_data(path_to_book).items())
             await con.executemany("insert into book_pages(page_number, "
                                   "page_text, book_id) values (?, ?, ?)", values)
+            await con.execute("update book set page_amount = (select "
+                              "count(page_number) from book_pages where book_id=?) "
+                              "where book_id = ?", (book_id, book_id))
             await con.commit()
             logger.info("Book's data has been inited")
 
@@ -158,8 +167,16 @@ is_bookmark: bool | None = None, page_number: int | None = None) -> BookData:
             logger.info("Bookmark has been added")
 
 
+    async def show_books(self) -> Iterable[BookInfo]:
+        async with aiosqlite.connect(self.db_path) as con:
+            res = await con.execute("select book_id, book_name, release_date from book")
+            return (BookInfo(*row) for row in await res.fetchall())
+
+
 async def main() -> None:
-    pass
+    db = DataBase(SQLITE_DB_FILE)
+    print(await db.show_books())
+
 
 
 if __name__ == "__main__":

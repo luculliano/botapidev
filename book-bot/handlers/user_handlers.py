@@ -9,9 +9,9 @@ from aiosqlite import IntegrityError
 
 from config_data import SQLITE_DB_FILE
 from database import DataBase
-from filters import IsBookmarkDelete, IsUsebookmark
-from keyboards import create_bookmarks_kb, create_edit_kb, create_inline_kb
-from vocabulary import VOCABULARY_RU
+from filters import IsBookmarkDelete, IsUsebookmark, IsBookInfo
+from keyboards import *
+from vocabulary import VOCABULARY_RU, VOCABULARY_BOOKS_RU
 
 
 router = Router()
@@ -139,4 +139,24 @@ async def proceed_bookmark_del(callback: CallbackQuery, page_number: int) -> Non
         return await callback.message.edit_text(VOCABULARY_RU["no_bookmarks"])  # pyright: ignore
     keyboard = create_edit_kb(bookmarks)
     await callback.message.edit_text(VOCABULARY_RU["/bookmarks"],  # pyright: ignore
+                                     reply_markup=keyboard)
+
+
+@router.message(Command("books"))
+async def proceed_books(message: Message) -> None:
+    keyboard = create_books_kb(await db.show_books())
+    await message.answer(VOCABULARY_RU["/books"], reply_markup=keyboard)
+
+
+@router.callback_query(IsBookInfo())
+async def proceed_book_info(callback: CallbackQuery, book_id: int) -> None:
+    keyboard = create_book_kb(2, "read", "back")
+    await callback.message.edit_text(VOCABULARY_BOOKS_RU[book_id],  # pyright: ignore
+                                     reply_markup=keyboard)
+
+
+@router.callback_query(Text("back"))
+async def proceed_back(callback: CallbackQuery) -> None:
+    keyboard = create_books_kb(await db.show_books())
+    await callback.message.edit_text(VOCABULARY_RU["/books"],  # pyright: ignore
                                      reply_markup=keyboard)

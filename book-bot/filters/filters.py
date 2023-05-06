@@ -22,3 +22,9 @@ class IsUsebookmark(BaseFilter):
     async def __call__(self, callback: CallbackQuery) -> dict[str, int] | None:
         match = re.fullmatch(r"^(\d+)move+$", callback.data)  # pyright: ignore
         return {"page_number": int(match.group(1))} if match else None
+
+
+class IsBookInfo(BaseFilter):
+    async def __call__(self, callback: CallbackQuery) -> dict[str, int] | None:
+        match = re.fullmatch(r"^(\d+)book+$", callback.data)  # pyright: ignore
+        return {"book_id": int(match.group(1))} if match else None

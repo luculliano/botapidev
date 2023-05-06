@@ -10,3 +10,5 @@ SQLITE_DB_FILE = Path(__file__).parent.parent.joinpath("store", "book-bot.sqlite
 SQLITE_SCRIPT = Path(__file__).parent.parent.joinpath("database", "book-bot.sql")
 HAM_ON_RYE_TXT = Path(__file__).parent.parent.joinpath("store", "ham_on_rye.txt")
 HAM_ON_RYE_JSON = Path(__file__).parent.parent.joinpath("store", "ham_on_rye.json")
+WOMEN_TXT = Path(__file__).parent.parent.joinpath("store", "women.txt")
+WOMEN_JSON = Path(__file__).parent.parent.joinpath("store", "women.json")
