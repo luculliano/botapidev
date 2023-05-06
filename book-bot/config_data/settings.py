@@ -1,11 +1,10 @@
 import logging.config
-from pathlib import Path
 import sys
 
 
 LOGGING_CONFIG = {
-    "version": 1,  # for compataability if ithis config will change in future only
-    "disable_existing_loggers": False,  # not disable existing loggers
+    "version": 1,
+    "disable_existing_loggers": False,
     "formatters": {
         "default_formatter": {
             "format": "%(asctime)s [%(levelname)s] %(filename)s: %(message)s"
@@ -13,11 +12,6 @@ LOGGING_CONFIG = {
     },
     # specify handlers
     "handlers": {
-        # "file_handler": {
-        #     "class": "logging.FileHandler",
-        #     "formatter": "default_formatter",
-        #     "filename": Path(__file__).parent.joinpath("log.log"),
-        # },
         "stream_handler": {
             "class": "logging.StreamHandler",
             "formatter": "default_formatter",

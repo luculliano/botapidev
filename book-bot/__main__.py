@@ -2,24 +2,19 @@ import asyncio
 
 from aiogram import Bot, Dispatcher
 
-from config import TELEGRAM_BOT_TOKEN
-import handlers
+from config_data import TELEGRAM_BOT_TOKEN, logger
+from handlers import user_handlers, other_handlers
 from keyboards import set_main_menu
-from settings import logger
-from database import init_db
 
 
 async def main() -> None:
     logger.info("Start pooling.")
 
-    await init_db()
-
-    bot = Bot(TELEGRAM_BOT_TOKEN)
+    bot = Bot(TELEGRAM_BOT_TOKEN, parse_mode="HTML")
     dp = Dispatcher()
-    dp.include_router(handlers.router)
+    dp.include_routers(user_handlers.router, other_handlers.router)
 
     await set_main_menu(bot)
-
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
 
