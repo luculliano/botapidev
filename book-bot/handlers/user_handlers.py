@@ -12,7 +12,7 @@ from database import DataBase
 from filters import IsBookmarkDelete, IsUsebookmark, IsBookInfo
 from keyboards import *
 from vocabulary import VOCABULARY_RU, VOCABULARY_BOOKS_RU
-
+from services import parse_page_number
 
 router = Router()
 db = DataBase(SQLITE_DB_FILE)
@@ -50,29 +50,28 @@ async def proceed_continue(message: Message) -> None:
 
 
 @router.callback_query(Text("backward"))
-async def proceed_backward(callback: CallbackQuery) -> None:
+async def proceed_backward(callback: CallbackQuery) -> None | bool:
     cur_uid = callback.from_user.id
-    try:
-        book_data = await db.update_page(cur_uid, -1)
-        keyboard = create_inline_kb(3, "backward",
-                    f"{book_data.page_number}/{book_data.book_length}", "forward")
-        await callback.message.edit_text(text=book_data.page_text,  # pyright: ignore
-                                         reply_markup=keyboard)
-    except IntegrityError:
-        await callback.answer()
+    if parse_page_number(callback.message.reply_markup)[0] == 1:  # pyright: ignore
+        return await callback.answer()
+    book_data = await db.update_page(cur_uid, -1)
+    keyboard = create_inline_kb(3, "backward",
+                f"{book_data.page_number}/{book_data.book_length}", "forward")
+    await callback.message.edit_text(text=book_data.page_text,  # pyright: ignore
+                                     reply_markup=keyboard)
 
 
 @router.callback_query(Text("forward"))
-async def proceed_forward(callback: CallbackQuery) -> None:
+async def proceed_forward(callback: CallbackQuery) -> None | bool:
     cur_uid = callback.from_user.id
-    try:
-        book_data = await db.update_page(cur_uid, 1)
-        keyboard = create_inline_kb(3, "backward",
-                    f"{book_data.page_number}/{book_data.book_length}", "forward")
-        await callback.message.edit_text(text=book_data.page_text,  # pyright: ignore
-                                         reply_markup=keyboard)
-    except IntegrityError:
-        await callback.answer()
+    page_data = parse_page_number(callback.message.reply_markup)  # pyright: ignore
+    if page_data[0] == page_data[1]:
+        return await callback.answer()
+    book_data = await db.update_page(cur_uid, 1)
+    keyboard = create_inline_kb(3, "backward",
+                f"{book_data.page_number}/{book_data.book_length}", "forward")
+    await callback.message.edit_text(text=book_data.page_text,  # pyright: ignore
+                                     reply_markup=keyboard)
 
 
 @router.callback_query(lambda x: re.fullmatch(r"^(\d+)/\d+$", x.data))
