@@ -16,11 +16,11 @@ def create_books_kb(books: Iterable[BookInfo], width: int = 1) -> InlineKeyboard
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
 
-def create_book_kb(width: int = 2, *args) -> InlineKeyboardMarkup:
+def create_book_kb(book_id, width: int = 2, *args) -> InlineKeyboardMarkup:
     keyboard = []
     buttons = (InlineKeyboardButton(text=VOCABULARY_RU[button_data]
-                            if button_data in VOCABULARY_RU else button_data,
-                            callback_data=button_data) for button_data in args)
+                        if button_data in VOCABULARY_RU else button_data,
+                        callback_data=f"{book_id}{button_data}") for button_data in args)
     for tpl in zip_longest(*(iter(buttons),)*width):
         keyboard.append(list(filter(None, tpl)))
 

@@ -149,13 +149,22 @@ async def proceed_books(message: Message) -> None:
 
 @router.callback_query(IsBookInfo())
 async def proceed_book_info(callback: CallbackQuery, book_id: int) -> None:
-    keyboard = create_book_kb(2, "read", "back")
+    keyboard = create_book_kb(book_id, 2, "read", "back")
     await callback.message.edit_text(VOCABULARY_BOOKS_RU[book_id],  # pyright: ignore
                                      reply_markup=keyboard)
 
 
-@router.callback_query(Text("back"))
+@router.callback_query(lambda x: re.fullmatch(r"(\d+)back", x.data))
 async def proceed_back(callback: CallbackQuery) -> None:
     keyboard = create_books_kb(await db.show_books())
     await callback.message.edit_text(VOCABULARY_RU["/books"],  # pyright: ignore
                                      reply_markup=keyboard)
+
+
+@router.callback_query(Text("read"))
+async def proceed_read(callback: CallbackQuery) -> None:
+    cur_uid = callback.from_user.id
+    book_data = await db.update_page(cur_uid, -1, is_begin=True)
+    keyboard = create_inline_kb(3, "backward",
+                f"{book_data.page_number}/{book_data.book_length}", "forward")
+    await callback.answer(book_data.page_text, reply_markup=keyboard)
