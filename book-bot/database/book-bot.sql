@@ -28,7 +28,15 @@ create table if not exists bookmarks(
 create table if not exists users(
     users_id integer primary key autoincrement,
     tg_uid integer unique not null,
-    book_pages_id integer not null,  /*not null ибо constraint check с условием нельзя в sqlite*/
+    user_name text
+);
+
+create table if not exists users_book_pages(
+    users_book_pages_id integer primary key autoincrement,
+    users_id integer,
+    book_pages_id integer not null,  /*not null ибо constraint check с условием нельзя в sqlite (для book_pages > 0)*/
+    constraint unique_user_book_page unique(book_pages_id, users_id), /*уникальное правило*/
+    foreign key (users_id) references users (users_id) on delete cascade,
     foreign key (book_pages_id) references book_pages (book_pages_id)
 );
 

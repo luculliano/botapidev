@@ -10,6 +10,8 @@ python = "^3.10"
 aiogram = {git = "https://github.com/aiogram/aiogram.git"}
 python-dotenv = {git = "https://github.com/theskumar/python-dotenv.git", rev = "v1.0.0"}
 aiosqlite = {git = "https://github.com/omnilib/aiosqlite.git", rev = "v0.19.0"}
+asyncpg = {git = "https://github.com/MagicStack/asyncpg.git", rev = "v0.27.0"}
+sqlalchemy = {git = "https://github.com/sqlalchemy/sqlalchemy.git", rev = "rel_2_0_14"}
 
 
 [build-system]
